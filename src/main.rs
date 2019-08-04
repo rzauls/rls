@@ -46,7 +46,7 @@ fn run(dir: &PathBuf) -> Result<(), Box<Error>> {
             // format size
             let size: String;
             if metadata.len() == 0 {
-                size = "".to_string();
+                size = "...".to_string();
             } else if metadata.len() <= 1024 {
                 size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B);
             } else if metadata.len() <= 1048576 {
