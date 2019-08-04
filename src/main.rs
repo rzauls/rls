@@ -8,7 +8,6 @@ use structopt::StructOpt;
 
 /**
  * TODO: print dirs first, then files
- * TODO: convert bytes into more readable format (mb, gb, etc...)
  */
 #[derive(StructOpt, Debug)]
 struct Opt {
@@ -30,7 +29,7 @@ fn run(dir: &PathBuf) -> Result<(), Box<Error>> {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
-            let mut file_name_colored: colored::ColoredString;
+            let file_name_colored: colored::ColoredString;
             let mut file_name = entry
                 .file_name()
                 .into_string()
@@ -43,7 +42,21 @@ fn run(dir: &PathBuf) -> Result<(), Box<Error>> {
                 file_name_colored = file_name.yellow();
             }
             let metadata = entry.metadata()?;
-            let size = metadata.len().to_string() + " B";
+
+            // format size
+            let size: String;
+            if metadata.len() == 0 {
+                size = "".to_string();
+            } else if metadata.len() <= 1024 {
+                size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B);
+            } else if metadata.len() <= 1048576 {
+                size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB);
+            } else if metadata.len() <= 1073741824 {
+                size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB);
+            } else {
+                size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB);
+            }
+            // let size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB);
             let modified: DateTime<Local> = DateTime::from(metadata.modified()?);
 
             println!(
