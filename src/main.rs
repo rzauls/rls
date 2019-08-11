@@ -10,14 +10,14 @@ use structopt::StructOpt;
  * TODO: print dirs first, then files
  */
 #[derive(StructOpt, Debug)]
-struct Opt {
+struct Options {
     /// Output file
     #[structopt(default_value = ".", parse(from_os_str))]
     path: PathBuf,
 }
 
 fn main() {
-    let opt = Opt::from_args();
+    let opt = Options::from_args();
     if let Err(ref e) = run(&opt.path) {
         println!("{}", e);
         process::exit(1);
@@ -56,7 +56,6 @@ fn run(dir: &PathBuf) -> Result<(), Box<Error>> {
             } else {
                 size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB);
             }
-            // let size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB);
             let modified: DateTime<Local> = DateTime::from(metadata.modified()?);
 
             println!(
