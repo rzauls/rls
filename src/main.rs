@@ -8,6 +8,7 @@ use structopt::StructOpt;
 
 /**
  * TODO: print dirs first, then files
+ * TODO: figure out line wrapping (cut filenames after x chars?)
  */
 #[derive(StructOpt, Debug)]
 struct Options {
