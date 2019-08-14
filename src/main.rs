@@ -9,6 +9,8 @@ use structopt::StructOpt;
 /**
  * TODO: print dirs first, then files
  * TODO: figure out line wrapping (cut filenames after x chars?)
+ * TODO: hide dotfiles by default, show with -a flag
+ * TODO: hide owner by default, show with -o flag
  */
 #[derive(StructOpt, Debug)]
 struct Options {
@@ -46,17 +48,15 @@ fn run(dir: &PathBuf) -> Result<(), Box<Error>> {
 
             // format size
             let size: String;
-            if metadata.len() == 0 {
-                size = "...".to_string();
-            } else if metadata.len() <= 1024 {
-                size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B);
-            } else if metadata.len() <= 1048576 {
-                size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB);
-            } else if metadata.len() <= 1073741824 {
-                size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB);
-            } else {
-                size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB);
-            }
+            match metadata.len() {
+                0 => size = "...".to_string(),
+                1...1024 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B),
+                1025...1048567 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB),
+                1048576...1073741824 => {
+                    size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB)
+                }
+                _ => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB),
+            };
             let modified: DateTime<Local> = DateTime::from(metadata.modified()?);
 
             println!(
