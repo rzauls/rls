@@ -7,15 +7,18 @@ use std::process;
 use structopt::StructOpt;
 
 /**
+ * Simple ls clone with windows-friendly coloured formatting
+ *
  * TODO: print dirs first, then files
  * TODO: figure out line wrapping (cut filenames after x chars?)
+ * TODO: fix ownership flag
  */
 #[derive(StructOpt, Debug)]
 struct Options {
-    // Show ownership details
+    /// Show ownership details
     #[structopt(short = "o", long = "owner")]
     owner: bool,
-    // Show all files (including dotfiles)
+    /// Show all files (including dotfiles)
     #[structopt(short = "a", long = "all")]
     all: bool,
     /// Output file
