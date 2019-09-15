@@ -34,7 +34,7 @@ fn main() {
     }
 }
 
-fn run(dir: &PathBuf, all: &bool, owner: &bool) -> Result<(), Box<Error>> {
+fn run(dir: &PathBuf, all: &bool, owner: &bool) -> Result<(), Box<dyn Error>> {
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
@@ -64,9 +64,9 @@ fn run(dir: &PathBuf, all: &bool, owner: &bool) -> Result<(), Box<Error>> {
             let size: String;
             match metadata.len() {
                 0 => size = "...".to_string(),
-                1...1024 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B),
-                1025...1048567 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB),
-                1048576...1073741824 => {
+                1..=1024 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B),
+                1025..=1048567 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB),
+                1048576..=1073741824 => {
                     size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB)
                 }
                 _ => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB),
