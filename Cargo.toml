@@ -1,5 +1,5 @@
 [package]
-name = "rls"
+name = "rustlist"
 version = "0.1.0"
 authors = ["Rihards Zauls <rihards.zauls@gmail.com>"]
 edition = "2018"
