@@ -221,7 +221,7 @@ version = "0.8.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "rls"
+name = "rustlist"
 version = "0.1.0"
 dependencies = [
  "bytefmt 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
