@@ -2,15 +2,17 @@ use chrono::{DateTime, Local};
 use colored::*;
 use std::error::Error;
 use std::fs;
+use std::fs::DirEntry;
 use std::path::PathBuf;
 use std::process;
 use structopt::StructOpt;
+use crate::OutputColor::{Green, Yellow};
 
 /**
  * Simple ls clone with windows-friendly coloured formatting
  *
- * TODO: reformat the obvious code duplication away
- * TODO: fix alias/symlinm issues (~/ etc)
+ * TODO: fix alias/symlink issues (~/ etc)
+ * TODO: fix directory-first ordering
  * TODO: figure out line wrapping (cut filenames after x chars?)
  */
 #[derive(StructOpt, Debug)]
@@ -23,6 +25,11 @@ struct Options {
     path: PathBuf,
 }
 
+enum OutputColor {
+    Green,
+    Yellow,
+}
+
 fn main() {
     let opt = Options::from_args();
     if let Err(ref e) = run(&opt.path, &opt.all) {
@@ -31,12 +38,8 @@ fn main() {
     }
 }
 
-fn _type_of<T>(_: T) -> &'static str {
-    std::any::type_name::<T>()
-}
-
-fn print_dir(input: std::fs::DirEntry, all: &bool) {
-    let file_name_colored: colored::ColoredString;
+fn print_in_color(input: DirEntry, all: &bool, color: OutputColor, postfix: &str) {
+    let file_name_colored: ColoredString;
     let file_name = input.file_name().into_string();
     // check if file is dotfile
     match file_name {
@@ -45,89 +48,54 @@ fn print_dir(input: std::fs::DirEntry, all: &bool) {
                 return;
             }
 
-            item += "/";
-            file_name_colored = item.green();
-
-            match input.metadata() {
-                Ok(metadata) => {
-                    // format size
-                    let size: String;
-                    match metadata.len() {
-                        0 => size = "...".to_string(),
-                        1..=1024 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B),
-                        1025..=1048567 => {
-                            size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB)
-                        }
-                        1048576..=1073741824 => {
-                            size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB)
-                        }
-                        _ => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB),
-                    };
-                    let modified: DateTime<Local> = match metadata.modified() {
-                        Ok(time) => DateTime::from(time),
-                        Err(e) => panic!("PANIC: {:?}", e),
-                    };
-
-                    println!(
-                        // left padding 15 chars to fit large filesizes
-                        "{:>15} {} {}",
-                        size.bright_blue(),
-                        modified.format("%_d %b %Y %H:%M").to_string(),
-                        file_name_colored
-                    );
-                }
-                Err(e) => panic!("PANIC: {:?}", e),
+            item += postfix;
+            match color {
+                Green => { file_name_colored = item.green() }
+                Yellow => { file_name_colored = item.yellow() }
             }
+            print_with_metadata(input, file_name_colored);
         }
-
         Err(e) => panic!("PANIC: {:?}", e),
     }
 }
 
-fn print_item(input: std::fs::DirEntry, all: &bool) {
-    let file_name_colored: colored::ColoredString;
-    let file_name = input.file_name().into_string();
-    // check if file is dotfile
-    match file_name {
-        Ok(item) => {
-            if (all == &false) && (item.starts_with(".")) {
-                return;
-            }
+fn print_dir(input: DirEntry, all: &bool) {
+    print_in_color(input, all, Green, "/")
+}
 
-            file_name_colored = item.yellow();
+fn print_item(input: DirEntry, all: &bool) {
+    print_in_color(input, all, Yellow, "")
+}
 
-            match input.metadata() {
-                Ok(metadata) => {
-                    // format size
-                    let size: String;
-                    match metadata.len() {
-                        0 => size = "...".to_string(),
-                        1..=1024 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B),
-                        1025..=1048567 => {
-                            size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB)
-                        }
-                        1048576..=1073741824 => {
-                            size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB)
-                        }
-                        _ => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB),
-                    };
-                    let modified: DateTime<Local> = match metadata.modified() {
-                        Ok(time) => DateTime::from(time),
-                        Err(e) => panic!("PANIC: {:?}", e),
-                    };
-
-                    println!(
-                        // left padding 15 chars to fit large filesizes
-                        "{:>15} {} {}",
-                        size.bright_blue(),
-                        modified.format("%_d %b %Y %H:%M").to_string(),
-                        file_name_colored
-                    );
+fn print_with_metadata(input: DirEntry, file_name: ColoredString) {
+    match input.metadata() {
+        Ok(metadata) => {
+            // format size
+            let size: String;
+            match metadata.len() {
+                0 => size = "...".to_string(),
+                1..=1024 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B),
+                1025..=1048567 => {
+                    size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB)
                 }
+                1048576..=1073741824 => {
+                    size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB)
+                }
+                _ => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB),
+            };
+            let modified: DateTime<Local> = match metadata.modified() {
+                Ok(time) => DateTime::from(time),
                 Err(e) => panic!("PANIC: {:?}", e),
-            }
-        }
+            };
 
+            println!(
+                // left padding 15 chars to fit large filesizes
+                "{:>15} {} {}",
+                size.bright_blue(),
+                modified.format("%_d %b %Y %H:%M").to_string(),
+                file_name
+            );
+        }
         Err(e) => panic!("PANIC: {:?}", e),
     }
 }
@@ -135,15 +103,11 @@ fn print_item(input: std::fs::DirEntry, all: &bool) {
 fn run(dir: &PathBuf, all: &bool) -> Result<(), Box<dyn Error>> {
     if dir.is_dir() {
         for entry in fs::read_dir(dir)? {
+            // TODO: doing a single loop loses directories-first ordering
             let item = entry?;
-            if item.path().is_dir() {
-                print_dir(item, all);
-            }
-        }
-        for entry in fs::read_dir(dir)? {
-            let item = entry?;
-            if !item.path().is_dir() {
-                print_item(item, all);
+            match item.path().is_dir() {
+                true => { print_dir(item, all) }
+                false => { print_item(item, all) }
             }
         }
     }
