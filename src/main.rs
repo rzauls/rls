@@ -41,22 +41,18 @@ fn main() {
 fn print_in_color(input: DirEntry, all: &bool, color: OutputColor, postfix: &str) {
     let file_name_colored: ColoredString;
     let file_name = input.file_name().into_string();
+    let mut item = file_name.expect("could not read filename");
     // check if file is dotfile
-    match file_name {
-        Ok(mut item) => {
-            if (all == &false) && (item.starts_with(".")) {
-                return;
-            }
-
-            item += postfix;
-            match color {
-                Green => { file_name_colored = item.green() }
-                Yellow => { file_name_colored = item.yellow() }
-            }
-            print_with_metadata(input, file_name_colored);
-        }
-        Err(e) => panic!("PANIC: {:?}", e),
+    if (all == &false) && (item.starts_with(".")) {
+        return;
     }
+
+    item += postfix;
+    match color {
+        Green => { file_name_colored = item.green() }
+        Yellow => { file_name_colored = item.yellow() }
+    }
+    print_with_metadata(input, file_name_colored);
 }
 
 fn print_dir(input: DirEntry, all: &bool) {
@@ -68,36 +64,32 @@ fn print_item(input: DirEntry, all: &bool) {
 }
 
 fn print_with_metadata(input: DirEntry, file_name: ColoredString) {
-    match input.metadata() {
-        Ok(metadata) => {
-            // format size
-            let size: String;
-            match metadata.len() {
-                0 => size = "...".to_string(),
-                1..=1024 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B),
-                1025..=1048567 => {
-                    size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB)
-                }
-                1048576..=1073741824 => {
-                    size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB)
-                }
-                _ => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB),
-            };
-            let modified: DateTime<Local> = match metadata.modified() {
-                Ok(time) => DateTime::from(time),
-                Err(e) => panic!("PANIC: {:?}", e),
-            };
+    let metadata = input.metadata().
+        expect("file has no metadata");
 
-            println!(
-                // left padding 15 chars to fit large filesizes
-                "{:>15} {} {}",
-                size.bright_blue(),
-                modified.format("%_d %b %Y %H:%M").to_string(),
-                file_name
-            );
+    // format size
+    let size: String;
+    match metadata.len() {
+        0 => size = "...".to_string(),
+        1..=1024 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B),
+        1025..=1048567 => {
+            size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB)
         }
-        Err(e) => panic!("PANIC: {:?}", e),
-    }
+        1048576..=1073741824 => {
+            size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB)
+        }
+        _ => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB),
+    };
+    let modified: DateTime<Local> = DateTime::from(metadata.modified().
+        expect("unknown modification date"));
+
+    println!(
+        // left padding 15 chars to fit large filesizes
+        "{:>15} {} {}",
+        size.bright_blue(),
+        modified.format("%_d %b %Y %H:%M").to_string(),
+        file_name
+    );
 }
 
 fn run(dir: &PathBuf, all: &bool) -> Result<(), Box<dyn Error>> {
