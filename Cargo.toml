@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.2.18"
-chrono = "0.4.7"
 colored = "1.8"
 bytefmt =  "0.1.7"
+time = { version = "0.3.20", features = ["formatting"] }

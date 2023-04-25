@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local};
+use crate::OutputColor::{Green, Yellow};
 use colored::*;
 use std::error::Error;
 use std::fs;
@@ -6,7 +6,7 @@ use std::fs::DirEntry;
 use std::path::PathBuf;
 use std::process;
 use structopt::StructOpt;
-use crate::OutputColor::{Green, Yellow};
+use time::{format_description::well_known::Rfc2822, OffsetDateTime};
 
 /**
  * Simple ls clone with windows-friendly coloured formatting
@@ -49,8 +49,8 @@ fn print_in_color(input: DirEntry, all: &bool, color: OutputColor, postfix: &str
 
     item += postfix;
     match color {
-        Green => { file_name_colored = item.green() }
-        Yellow => { file_name_colored = item.yellow() }
+        Green => file_name_colored = item.green(),
+        Yellow => file_name_colored = item.yellow(),
     }
     print_with_metadata(input, file_name_colored);
 }
@@ -64,30 +64,30 @@ fn print_item(input: DirEntry, all: &bool) {
 }
 
 fn print_with_metadata(input: DirEntry, file_name: ColoredString) {
-    let metadata = input.metadata().
-        expect("file has no metadata");
+    let metadata = input.metadata().expect("file has no metadata");
 
     // format size
     let size: String;
     match metadata.len() {
         0 => size = "...".to_string(),
         1..=1024 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::B),
-        1025..=1048567 => {
-            size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB)
-        }
-        1048576..=1073741824 => {
-            size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB)
-        }
+        1025..=1048567 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::KB),
+        1048576..=1073741824 => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::MB),
         _ => size = bytefmt::format_to(metadata.len(), bytefmt::Unit::GB),
     };
-    let modified: DateTime<Local> = DateTime::from(metadata.modified().
-        expect("unknown modification date"));
+
+    let modified: OffsetDateTime = metadata
+        .modified()
+        .expect("invalid file modification date")
+        .into();
+
+    let formatted_modified_time = modified.format(&Rfc2822).expect("invalid format string");
 
     println!(
         // left padding 15 chars to fit large filesizes
         "{:>15} {} {}",
         size.bright_blue(),
-        modified.format("%_d %b %Y %H:%M").to_string(),
+        formatted_modified_time,
         file_name
     );
 }
@@ -98,8 +98,8 @@ fn run(dir: &PathBuf, all: &bool) -> Result<(), Box<dyn Error>> {
             // TODO: doing a single loop loses directories-first ordering
             let item = entry?;
             match item.path().is_dir() {
-                true => { print_dir(item, all) }
-                false => { print_item(item, all) }
+                true => print_dir(item, all),
+                false => print_item(item, all),
             }
         }
     }
